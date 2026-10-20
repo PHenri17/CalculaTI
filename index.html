@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CalculaTI - Gerenciador & Calculadora de Lucro para TI</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+              800: '#075985',
+              900: '#0c4a6e',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    /* Estilos personalizados para impressão de orçamentos */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #print-area, #print-area * {
+        visibility: visible;
+      }
+      #print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: white !important;
+        color: black !important;
+        padding: 20px;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-950 text-slate-100 antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- Header Superior -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-30 no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="bg-gradient-to-tr from-brand-600 to-indigo-600 p-2.5 rounded-xl shadow-lg shadow-brand-500/20">
+          <i data-lucide="cpu" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">CalculaTI</h1>
+          <p class="text-xs text-slate-400">Simulador & Gestor de Serviços de TI</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center space-x-3">
+        <button onclick="switchTab('calculator')" id="tab-btn-calculator" class="px-3.5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-brand-600 text-white shadow-lg shadow-brand-600/30">
+          <i data-lucide="calculator" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Calculadora</span>
+        </button>
+        <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="px-3.5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-slate-800 text-slate-300 hover:bg-slate-700">
+          <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Histórico & Metricas</span>
+          <span id="badge-orders-count" class="bg-brand-500/20 text-brand-300 text-xs px-2 py-0.5 rounded-full font-mono">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Conteúdo Principal -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- SEÇÃO 1: CALCULADORA & SIMULADOR -->
+    <div id="section-calculator" class="space-y-6">
+      
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Formulário de Entrada (Esquerda - 7 Colunas) -->
+        <div class="lg:col-span-7 space-y-6">
+          
+          <!-- Card de Dados Básicos do Serviço -->
+          <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-xl">
+            <h2 class="text-base font-semibold text-white flex items-center gap-2 mb-4">
+              <i data-lucide="wrench" class="w-5 h-5 text-brand-500"></i>
+              Informações do Serviço & Cliente
+            </h2>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="sm:col-span-2">
+                <label class="block text-xs font-medium text-slate-400 mb-1">Descrição / Nome do Serviço *</label>
+                <div class="relative">
+                  <input type="text" id="service-title" placeholder="Ex: Formatação, Limpeza Preventiva e Troca de SSD" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all">
+                  <div class="absolute right-2 top-2 flex gap-1">
+                    <button onclick="setQuickPreset('format')" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded transition" title="Preencher Formatação">Formatação</button>
+                    <button onclick="setQuickPreset('clean')" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded transition" title="Preencher Limpeza">Limpeza</button>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Nome do Cliente (Opcional)</label>
+                <input type="text" id="client-name" placeholder="Ex: João da Silva / Empresa X" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all">
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Garantia Oferecida</label>
+                <select id="service-warranty" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all">
+                  <option value="30 Dias">30 Dias (Garantia Padrão)</option>
+                  <option value="90 Dias" selected>90 Dias (Recomendado por Lei)</option>
+                  <option value="6 Meses">6 Meses</option>
+                  <option value="1 Ano">1 Ano (Hardware Novo)</option>
+                  <option value="Sem Garantia">Sem Garantia de Software</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card de Mão de Obra e Tempo -->
+          <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-xl">
+            <h2 class="text-base font-semibold text-white flex items-center gap-2 mb-4">
+              <i data-lucide="clock" class="w-5 h-5 text-brand-500"></i>
+              Tempo & Valor da Hora Técnica
+            </h2>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Tempo Estimado (Horas)</label>
+                <input type="number" id="hours-input" value="2" min="0" step="0.5" oninput="calculateAll()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all">
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Sua Hora Técnica (R$)</label>
+                <div class="relative">
+                  <span class="absolute left-3 top-2.5 text-xs text-slate-500">R$</span>
+                  <input type="number" id="hourly-rate-input" value="80" min="0" step="5" oninput="calculateAll()" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Total Mão de Obra</label>
+                <div class="w-full bg-slate-800/60 border border-slate-700/50 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-brand-400 flex items-center justify-between">
+                  <span>R$</span>
+                  <span id="labor-cost-display">160,00</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card de Insumos e Peças Dinâmico -->
+          <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-xl">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h2 class="text-base font-semibold text-white flex items-center gap-2">
+                  <i data-lucide="package" class="w-5 h-5 text-brand-500"></i>
+                  Peças & Insumos Utilizados
+                </h2>
+                <p class="text-xs text-slate-400">Pasta térmica, licenças, peças de reposição, etc.</p>
+              </div>
+              <button onclick="addMaterialRow()" class="px-3 py-1.5 bg-brand-500/10 text-brand-400 border border-brand-500/30 hover:bg-brand-500/20 rounded-lg text-xs font-medium transition flex items-center gap-1.5">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                Adicionar Item
+              </button>
+            </div>
+
+            <!-- Lista de Materiais -->
+            <div id="materials-container" class="space-y-3">
+              <!-- Renderizado via JS -->
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
+              <span>Total em Insumos / Peças:</span>
+              <span class="font-bold text-slate-200 text-sm">R$ <span id="materials-total-display">0,00</span></span>
+            </div>
+          </div>
+
+          <!-- Card de Custos Operacionais e Margem -->
+          <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-xl">
+            <h2 class="text-base font-semibold text-white flex items-center gap-2 mb-4">
+              <i data-lucide="sliders" class="w-5 h-5 text-brand-500"></i>
+              Custos Fixos / Deslocamento & Margem de Lucro
+            </h2>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Custo Adicional / Deslocamento (R$)</label>
+                <div class="relative">
+                  <span class="absolute left-3 top-2.5 text-xs text-slate-500">R$</span>
+                  <input type="number" id="extra-cost-input" value="15" min="0" step="5" oninput="calculateAll()" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all">
+                </div>
+                <span class="text-[10px] text-slate-500">Gasolina, energia, internet proporcional.</span>
+              </div>
+
+              <div>
+                <div class="flex justify-between items-center mb-1">
+                  <label class="text-xs font-medium text-slate-400">Margem de Lucro Desejada</label>
+                  <span id="margin-percent-display" class="text-xs font-bold text-brand-400">40%</span>
+                </div>
+                <input type="range" id="margin-range" min="10" max="150" value="40" step="5" oninput="calculateAll()" class="w-full accent-brand-500 h-2 bg-slate-800 rounded-lg cursor-pointer">
+                <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                  <span>10% (Mínimo)</span>
+                  <span>50% (Padrão)</span>
+                  <span>100%+ (Alta)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Painel de Resultados & Diagnóstico (Direita - 5 Colunas) -->
+        <div class="lg:col-span-5 space-y-6">
+          
+          <!-- Card de Resumo de Preço e Métricas -->
+          <div class="bg-slate-900 border border-brand-500/30 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+            <div class="absolute -right-10 -top-10 w-32 h-32 bg-brand-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+            <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+              <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Preço Sugerido ao Cliente</span>
+              <span id="health-badge" class="px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+                <span id="health-text">Margem Saudável</span>
+              </span>
+            </div>
+
+            <!-- Valor Principal do Preço Final -->
+            <div class="my-6 text-center">
+              <span class="text-xs text-slate-400 block mb-1">VALOR TOTAL DO ORÇAMENTO</span>
+              <div class="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
+                R$ <span id="final-price-display">0,00</span>
+              </div>
+            </div>
+
+            <!-- Detalhamento de Custos e Lucro -->
+            <div class="space-y-3 bg-slate-950/80 rounded-xl p-4 border border-slate-800/80 text-xs">
+              <div class="flex justify-between text-slate-400">
+                <span>(+) Custo Insumos / Peças:</span>
+                <span class="font-mono text-slate-200" id="res-materials">R$ 0,00</span>
+              </div>
+              <div class="flex justify-between text-slate-400">
+                <span>(+) Custo Mão de Obra (Tempo):</span>
+                <span class="font-mono text-slate-200" id="res-labor">R$ 0,00</span>
+              </div>
+              <div class="flex justify-between text-slate-400">
+                <span>(+) Custos Operacionais:</span>
+                <span class="font-mono text-slate-200" id="res-extra">R$ 0,00</span>
+              </div>
+              <div class="pt-2 border-t border-slate-800 flex justify-between font-medium text-slate-300">
+                <span>(=) Custo Total Bruto:</span>
+                <span class="font-mono text-slate-200" id="res-total-cost">R$ 0,00</span>
+              </div>
+              <div class="pt-2 border-t border-slate-800 flex justify-between font-bold text-emerald-400 text-sm">
+                <span>(=) Lucro Líquido Real:</span>
+                <span class="font-mono" id="res-profit">R$ 0,00 (<span id="res-profit-margin">0</span>%)</span>
+              </div>
+            </div>
+
+            <!-- Botão de Ação Primária -->
+            <div class="mt-6 space-y-2">
+              <button onclick="openProposalModal()" class="w-full py-3 px-4 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-brand-600/30 transition flex items-center justify-center gap-2">
+                <i data-lucide="file-text" class="w-4 h-4"></i>
+                Gerar Proposta para Cliente
+              </button>
+              
+              <button onclick="saveCurrentOrder()" class="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-xl transition flex items-center justify-center gap-2 border border-slate-700">
+                <i data-lucide="save" class="w-4 h-4 text-brand-400"></i>
+                Salvar no Histórico Local
+              </button>
+            </div>
+          </div>
+
+          <!-- Card de Diagnóstico do Assistente de IA (Simulado) -->
+          <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-xl">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+                <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
+                Análise Inteligente de Precificação
+              </h3>
+              <button onclick="runAiAnalysis()" class="text-[11px] text-brand-400 hover:text-brand-300 font-medium flex items-center gap-1">
+                <i data-lucide="refresh-cw" class="w-3 h-3"></i> Recalcular IA
+              </button>
+            </div>
+
+            <div id="ai-feedback-box" class="p-3.5 bg-slate-950/60 rounded-xl border border-slate-800 text-xs leading-relaxed space-y-2 text-slate-300">
+              <!-- Conteúdo Gerado Dinamicamente -->
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- SEÇÃO 2: HISTÓRICO & DASHBOARD -->
+    <div id="section-dashboard" class="space-y-6 hidden">
+      
+      <!-- Cards de Métricas Gerais -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-4 shadow-lg">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-400">Total Faturado</span>
+            <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg">
+              <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <p class="text-2xl font-bold text-white mt-2">R$ <span id="dash-total-revenue">0,00</span></p>
+          <span class="text-[10px] text-slate-500">Soma de serviços concluídos</span>
+        </div>
+
+        <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-4 shadow-lg">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-400">Lucro Líquido Acumulado</span>
+            <div class="p-2 bg-brand-500/10 text-brand-400 rounded-lg">
+              <i data-lucide="trending-up" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <p class="text-2xl font-bold text-white mt-2">R$ <span id="dash-total-profit">0,00</span></p>
+          <span class="text-[10px] text-slate-500">Lucro real descontando custos</span>
+        </div>
+
+        <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-4 shadow-lg">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-400">Média de Lucro / Serviço</span>
+            <div class="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg">
+              <i data-lucide="pie-chart" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <p class="text-2xl font-bold text-white mt-2"><span id="dash-avg-margin">0</span>%</p>
+          <span class="text-[10px] text-slate-500">Margem média de todos os registros</span>
+        </div>
+
+        <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-4 shadow-lg">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-400">Total de Atendimentos</span>
+            <div class="p-2 bg-amber-500/10 text-amber-400 rounded-lg">
+              <i data-lucide="briefcase" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <p class="text-2xl font-bold text-white mt-2" id="dash-total-count">0</p>
+          <span class="text-[10px] text-slate-500">Serviços cadastrados no histórico</span>
+        </div>
+
+      </div>
+
+      <!-- Tabela de Serviços Gravados -->
+      <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <h2 class="text-base font-semibold text-white flex items-center gap-2">
+            <i data-lucide="list" class="w-5 h-5 text-brand-500"></i>
+            Histórico de Orçamentos e Serviços
+          </h2>
+          <div class="flex items-center gap-2">
+            <button onclick="clearAllHistory()" class="px-3 py-1.5 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 rounded-lg text-xs font-medium transition">
+              Limpar Histórico
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabela Responsiva -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+              <tr>
+                <th class="p-3">Data</th>
+                <th class="p-3">Serviço / Cliente</th>
+                <th class="p-3">Custo Total</th>
+                <th class="p-3">Preço Cobrado</th>
+                <th class="p-3">Lucro Líquido</th>
+                <th class="p-3">Status</th>
+                <th class="p-3 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="orders-table-body" class="divide-y divide-slate-800/60">
+              <!-- Renderizado via JS -->
+            </tbody>
+          </table>
+          <div id="empty-history-msg" class="py-12 text-center text-slate-500 text-xs">
+            Nenhum serviço salvo até o momento. Faça uma simulação e clique em "Salvar no Histórico Local".
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- MODAL: Gerador de Proposta / Recibo -->
+  <div id="proposal-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto no-print">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-6 relative max-h-[90vh] flex flex-col">
+      
+      <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="file-check" class="w-5 h-5 text-brand-500"></i>
+          Proposta Comercial / Orçamento
+        </h3>
+        <button onclick="closeProposalModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Área Visual do Documento / Orçamento -->
+      <div class="flex-1 overflow-y-auto pr-1">
+        <div id="print-area" class="bg-slate-950 p-6 rounded-xl border border-slate-800 text-slate-200 text-xs space-y-6">
+          
+          <!-- Cabeçalho Proposta -->
+          <div class="flex justify-between items-start border-b border-slate-800 pb-4">
+            <div>
+              <h2 class="text-lg font-bold text-white">ORÇAMENTO DE SERVIÇOS DE TI</h2>
+              <p class="text-slate-400 text-[11px]" id="prop-date">Data: --/--/----</p>
+            </div>
+            <div class="text-right">
+              <span class="text-brand-400 font-semibold text-sm">CalculaTI / Assistência</span>
+              <p class="text-slate-500 text-[10px]">Atendimento Especializado</p>
+            </div>
+          </div>
+
+          <!-- Dados Cliente -->
+          <div class="grid grid-cols-2 gap-4 bg-slate-900/50 p-3 rounded-lg border border-slate-800/60">
+            <div>
+              <span class="text-slate-500 block text-[10px] uppercase">Cliente</span>
+              <span id="prop-client-name" class="font-medium text-slate-200">Não informado</span>
+            </div>
+            <div>
+              <span class="text-slate-500 block text-[10px] uppercase">Garantia Oferecida</span>
+              <span id="prop-warranty" class="font-medium text-slate-200">90 Dias</span>
+            </div>
+          </div>
+
+          <!-- Descrição do Serviço -->
+          <div>
+            <h4 class="font-semibold text-white mb-2 text-xs uppercase text-slate-400 tracking-wider">Descrição dos Serviços Solicitados</h4>
+            <div class="bg-slate-900/30 p-3 rounded-lg border border-slate-800">
+              <p id="prop-service-title" class="font-medium text-slate-100 text-sm">--</p>
+              <p class="text-slate-400 mt-1 text-[11px]" id="prop-labor-detail">Mão de obra e diagnósticos inclusos.</p>
+            </div>
+          </div>
+
+          <!-- Tabela de Peças/Insumos na Proposta -->
+          <div>
+            <h4 class="font-semibold text-white mb-2 text-xs uppercase text-slate-400 tracking-wider">Peças e Componentes de Reposição</h4>
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-800 text-slate-500 text-[10px]">
+                  <th class="py-1.5">Item / Descrição</th>
+                  <th class="py-1.5 text-right">Valor Unit.</th>
+                </tr>
+              </thead>
+              <tbody id="prop-materials-list" class="divide-y divide-slate-800/40">
+                <!-- Renderizado via JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Resumo Financeiro da Proposta -->
+          <div class="pt-4 border-t border-slate-800 flex justify-between items-end">
+            <div>
+              <p class="text-slate-400 text-[10px]">Validade da Proposta: 7 dias úteis</p>
+              <p class="text-slate-400 text-[10px]">Pagamento: Pix, Cartão ou Dinheiro</p>
+            </div>
+            <div class="text-right">
+              <span class="text-slate-400 text-[10px] uppercase block">Valor Total do Serviço</span>
+              <span id="prop-final-price" class="text-2xl font-bold text-emerald-400">R$ 0,00</span>
+            </div>
+          </div>
+
+          <!-- Termos -->
+          <div class="text-[9px] text-slate-500 border-t border-slate-800/60 pt-3">
+            * O serviço inclui a garantia indicada acima contra defeitos de execução. Danos causados por mau uso, quedas ou oscilações de energia elétrica não são coberto pela garantia.
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Ações do Modal -->
+      <div class="flex flex-col sm:flex-row gap-2 pt-2 border-t border-slate-800">
+        <button onclick="copyProposalToClipboard()" class="flex-1 py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-xl transition flex items-center justify-center gap-1.5">
+          <i data-lucide="copy" class="w-4 h-4 text-brand-400"></i>
+          Copiar Texto (WhatsApp)
+        </button>
+        <button onclick="window.print()" class="flex-1 py-2.5 px-3 bg-brand-600 hover:bg-brand-500 text-white text-xs font-medium rounded-xl shadow-lg transition flex items-center justify-center gap-1.5">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          Imprimir / Salvar PDF
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Toast de Notificação -->
+  <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 border border-slate-700 text-slate-100 text-xs px-4 py-3 rounded-xl shadow-2xl transition-all duration-300 opacity-0 translate-y-5 pointer-events-none z-50 flex items-center gap-2">
+    <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+    <span id="toast-message">Operação realizada!</span>
+  </div>
+
+  <!-- Lógica JavaScript Principal -->
+  <script>
+    // ESTADO DA APLICAÇÃO
+    let materials = [
+      { id: 1, name: "Pasta Técnica Prata / Térmica", cost: 15.00 },
+      { id: 2, name: "Limpa Contato / Alcool Isopropílico", cost: 10.00 }
+    ];
+
+    let ordersHistory = [];
+
+    // INICIALIZAÇÃO
+    window.onload = function() {
+      // Carregar Histórico do LocalStorage se existir
+      const savedOrders = localStorage.getItem('calculati_orders');
+      if (savedOrders) {
+        try {
+          ordersHistory = JSON.parse(savedOrders);
+        } catch (e) {
+          ordersHistory = [];
+        }
+      }
+
+      renderMaterialsRows();
+      calculateAll();
+      renderOrdersHistory();
+      lucide.createIcons();
+    };
+
+    // ALTERNAR ENTRE ABAS
+    function switchTab(tab) {
+      const calcSec = document.getElementById('section-calculator');
+      const dashSec = document.getElementById('section-dashboard');
+      const btnCalc = document.getElementById('tab-btn-calculator');
+      const btnDash = document.getElementById('tab-btn-dashboard');
+
+      if (tab === 'calculator') {
+        calcSec.classList.remove('hidden');
+        dashSec.classList.add('hidden');
+        btnCalc.className = 'px-3.5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-brand-600 text-white shadow-lg shadow-brand-600/30';
+        btnDash.className = 'px-3.5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-slate-800 text-slate-300 hover:bg-slate-700';
+      } else {
+        calcSec.classList.add('hidden');
+        dashSec.classList.remove('hidden');
+        btnDash.className = 'px-3.5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-brand-600 text-white shadow-lg shadow-brand-600/30';
+        btnCalc.className = 'px-3.5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-slate-800 text-slate-300 hover:bg-slate-700';
+        renderOrdersHistory();
+      }
+      lucide.createIcons();
+    }
+
+    // PRESETS RÁPIDOS DE PREENCHIMENTO
+    function setQuickPreset(type) {
+      if (type === 'format') {
+        document.getElementById('service-title').value = "Formatação, Instalação de Drivers e Backup";
+        document.getElementById('hours-input').value = "2.5";
+        document.getElementById('hourly-rate-input').value = "80";
+        materials = [
+          { id: Date.now(), name: "Licença/Ativação Windows/Antivírus", cost: 25.00 }
+        ];
+      } else if (type === 'clean') {
+        document.getElementById('service-title').value = "Limpeza Preventiva Física e Troca de Pasta Térmica";
+        document.getElementById('hours-input').value = "1.5";
+        document.getElementById('hourly-rate-input').value = "80";
+        materials = [
+          { id: Date.now(), name: "Pasta Térmica Prata de Alta Performance", cost: 18.00 },
+          { id: Date.now() + 1, name: "Álcool Isopropílico / Pincéis", cost: 8.00 }
+        ];
+      }
+      renderMaterialsRows();
+      calculateAll();
+      showToast("Preset carregado com sucesso!");
+    }
+
+    // ADICIONAR E REMOVER MATERIAL
+    function addMaterialRow() {
+      materials.push({
+        id: Date.now(),
+        name: "",
+        cost: 0
+      });
+      renderMaterialsRows();
+      calculateAll();
+    }
+
+    function removeMaterialRow(id) {
+      materials = materials.filter(m => m.id !== id);
+      renderMaterialsRows();
+      calculateAll();
+    }
+
+    function updateMaterial(id, field, value) {
+      const mat = materials.find(m => m.id === id);
+      if (mat) {
+        if (field === 'name') mat.name = value;
+        if (field === 'cost') mat.cost = parseFloat(value) || 0;
+      }
+      calculateAll();
+    }
+
+    function renderMaterialsRows() {
+      const container = document.getElementById('materials-container');
+      container.innerHTML = '';
+
+      if (materials.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-4 text-slate-500 text-xs border border-dashed border-slate-800 rounded-xl">
+            Nenhuma peça ou insumo adicionado para este serviço.
+          </div>
+        `;
+        return;
+      }
+
+      materials.forEach((mat) => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-2 bg-slate-950/60 p-2 rounded-xl border border-slate-800/80';
+        row.innerHTML = `
+          <input type="text" placeholder="Item (ex: SSD 480GB, Pasta Térmica)" value="${mat.name}" oninput="updateMaterial(${mat.id}, 'name', this.value)" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500">
+          <div class="relative w-28">
+            <span class="absolute left-2 top-1.5 text-[10px] text-slate-500">R$</span>
+            <input type="number" placeholder="0.00" min="0" step="1" value="${mat.cost || ''}" oninput="updateMaterial(${mat.id}, 'cost', this.value)" class="w-full bg-slate-900 border border-slate-800 rounded-lg pl-7 pr-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-brand-500">
+          </div>
+          <button onclick="removeMaterialRow(${mat.id})" class="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition" title="Remover">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
+        `;
+        container.appendChild(row);
+      });
+      lucide.createIcons();
+    }
+
+    // MOTOR DE CÁLCULO PRINCIPAL
+    function calculateAll() {
+      const hours = parseFloat(document.getElementById('hours-input')?.value) || 0;
+      const hourlyRate = parseFloat(document.getElementById('hourly-rate-input')?.value) || 0;
+      const extraCost = parseFloat(document.getElementById('extra-cost-input')?.value) || 0;
+      const marginPercent = parseFloat(document.getElementById('margin-range')?.value) || 0;
+
+      // 1. Mão de Obra
+      const laborCost = hours * hourlyRate;
+      const laborEl = document.getElementById('labor-cost-display');
+      if (laborEl) laborEl.innerText = laborCost.toFixed(2).replace('.', ',');
+
+      // 2. Insumos
+      const materialsTotal = materials.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
+      const matTotalEl = document.getElementById('materials-total-display');
+      if (matTotalEl) matTotalEl.innerText = materialsTotal.toFixed(2).replace('.', ',');
+
+      // 3. Custo Bruto Total
+      const totalCost = laborCost + materialsTotal + extraCost;
+
+      // 4. Preço Sugerido com Margem
+      const profitAmount = totalCost * (marginPercent / 100);
+      const finalPrice = totalCost + profitAmount;
+
+      // Atualizar Slider Badge
+      const marginBadgeEl = document.getElementById('margin-percent-display');
+      if (marginBadgeEl) marginBadgeEl.innerText = marginPercent + '%';
+
+      // Atualizar Painel de Resultados
+      const priceDisplayEl = document.getElementById('final-price-display');
+      if (priceDisplayEl) priceDisplayEl.innerText = finalPrice.toFixed(2).replace('.', ',');
+
+      const resMaterialsEl = document.getElementById('res-materials');
+      if (resMaterialsEl) resMaterialsEl.innerText = 'R$ ' + materialsTotal.toFixed(2).replace('.', ',');
+
+      const resLaborEl = document.getElementById('res-labor');
+      if (resLaborEl) resLaborEl.innerText = 'R$ ' + laborCost.toFixed(2).replace('.', ',');
+
+      const resExtraEl = document.getElementById('res-extra');
+      if (resExtraEl) resExtraEl.innerText = 'R$ ' + extraCost.toFixed(2).replace('.', ',');
+
+      const resTotalCostEl = document.getElementById('res-total-cost');
+      if (resTotalCostEl) resTotalCostEl.innerText = 'R$ ' + totalCost.toFixed(2).replace('.', ',');
+
+      const resProfitEl = document.getElementById('res-profit');
+      if (resProfitEl) resProfitEl.innerText = 'R$ ' + profitAmount.toFixed(2).replace('.', ',');
+
+      const resProfitMarginEl = document.getElementById('res-profit-margin');
+      if (resProfitMarginEl) resProfitMarginEl.innerText = marginPercent.toFixed(0);
+
+      // Avaliação de Saúde da Margem
+      updateHealthBadge(marginPercent, profitAmount);
+
+      // Atualizar Assistente IA
+      runAiAnalysis(laborCost, materialsTotal, totalCost, profitAmount, marginPercent, hourlyRate);
+    }
+
+    // INDICADOR DE SAÚDE DA MARGEM
+    function updateHealthBadge(margin, profit) {
+      const badge = document.getElementById('health-badge');
+      const text = document.getElementById('health-text');
+      if (!badge || !text) return;
+
+      if (margin < 20) {
+        badge.className = "px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/30 flex items-center gap-1";
+        text.innerText = "Margem Crítica / Baixa";
+      } else if (margin >= 20 && margin < 40) {
+        badge.className = "px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1";
+        text.innerText = "Margem Aceitável";
+      } else {
+        badge.className = "px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1";
+        text.innerText = "Margem Altamente Saudável";
+      }
+    }
+
+    // DIAGNÓSTICO INTELIGENTE / IA SIMULADA
+    function runAiAnalysis(laborCost, materialsTotal, totalCost, profitAmount, marginPercent, hourlyRate) {
+      const box = document.getElementById('ai-feedback-box');
+      if (!box) return;
+      let tips = [];
+
+      // Dica 1: Hora Técnica
+      if (hourlyRate < 50) {
+        tips.push("⚠️ <b>Hora Técnica Baixa:</b> Seu valor de R$ " + hourlyRate + "/h está abaixo da média de mercado para TI (R$ 70 - R$ 120/h). Considere reajustar para valorizar seu conhecimento.");
+      } else {
+        tips.push("✅ <b>Hora Técnica Competitiva:</b> O valor de R$ " + hourlyRate + "/h garante boa remuneração pelo seu tempo.");
+      }
+
+      // Dica 2: Risco de Garantia e Insumos
+      if (materialsTotal > 0 && marginPercent < 30) {
+        tips.push("⚡ <b>Atenção com Peças:</b> Você está incluindo peças de reposição com margem de lucro baixa (" + marginPercent + "%). Se a peça apresentar defeito na garantia, o custo do seu frete/tempo pode consumir todo o seu lucro.");
+      }
+
+      // Dica 3: Lucro Absoluto
+      if (profitAmount > 0 && profitAmount < 40) {
+        tips.push("💡 <b>Lucro em R$ Reduzido:</b> Embora a porcentagem pareça boa, o lucro líquido final em dinheiro é de apenas R$ " + profitAmount.toFixed(2) + ". Verifique se cobre o risco da operação.");
+      } else if (profitAmount >= 100) {
+        tips.push("🚀 <b>Ótimo Retorno:</b> Este serviço gerará um lucro líquido excelente de R$ " + profitAmount.toFixed(2) + " para a sua reserva comercial.");
+      }
+
+      box.innerHTML = tips.map(t => `<p>${t}</p>`).join('');
+    }
+
+    // PROPOSTA / MODAL
+    function openProposalModal() {
+      const title = document.getElementById('service-title').value || "Serviço Técnico de Manutenção";
+      const client = document.getElementById('client-name').value || "Cliente Geral";
+      const warranty = document.getElementById('service-warranty').value;
+      const finalPrice = document.getElementById('final-price-display').innerText;
+
+      document.getElementById('prop-service-title').innerText = title;
+      document.getElementById('prop-client-name').innerText = client;
+      document.getElementById('prop-warranty').innerText = warranty;
+      document.getElementById('prop-final-price').innerText = "R$ " + finalPrice;
+      document.getElementById('prop-date').innerText = "Data: " + new Date().toLocaleDateString('pt-BR');
+
+      // Preencher Peças na Proposta
+      const matList = document.getElementById('prop-materials-list');
+      matList.innerHTML = '';
+
+      if (materials.length === 0 || materials.every(m => !m.name)) {
+        matList.innerHTML = '<tr><td colspan="2" class="py-2 text-slate-500 italic">Nenhuma peça avulsa cobrada. Serviço de Mão de Obra Integral.</td></tr>';
+      } else {
+        materials.forEach(m => {
+          if (m.name) {
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-slate-800/40 text-slate-300';
+            tr.innerHTML = `
+              <td class="py-2">${m.name}</td>
+              <td class="py-2 text-right font-mono">R$ ${(parseFloat(m.cost) || 0).toFixed(2).replace('.', ',')}</td>
+            `;
+            matList.appendChild(tr);
+          }
+        });
+      }
+
+      document.getElementById('proposal-modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeProposalModal() {
+      document.getElementById('proposal-modal').classList.add('hidden');
+    }
+
+    // COPIAR PROPOSTA PARA O WHATSAPP
+    function copyProposalToClipboard() {
+      const title = document.getElementById('prop-service-title').innerText;
+      const client = document.getElementById('prop-client-name').innerText;
+      const warranty = document.getElementById('prop-warranty').innerText;
+      const price = document.getElementById('prop-final-price').innerText;
+
+      let text = `*ORÇAMENTO DE SERVIÇOS DE TI*\n`;
+      text += `-----------------------------------\n`;
+      text += `👤 *Cliente:* ${client}\n`;
+      text += `🛠️ *Serviço:* ${title}\n`;
+      text += `🛡️ *Garantia:* ${warranty}\n`;
+      text += `-----------------------------------\n`;
+      text += `💰 *Valor Total do Orçamento:* ${price}\n`;
+      text += `💳 *Formas de Pagamento:* Pix, Cartão ou Dinheiro\n\n`;
+      text += `_Orçamento válido por 7 dias. Qualquer dúvida estou à disposição!_`;
+
+      // Copiar via Fallback para Compatibilidade
+      const tempInput = document.createElement('textarea');
+      tempInput.value = text;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+
+      showToast("Proposta copiada! Pronto para colar no WhatsApp.");
+    }
+
+    // HISTÓRICO LOCALSTORAGE
+    function saveCurrentOrder() {
+      const title = document.getElementById('service-title').value || "Serviço Sem Nome";
+      const client = document.getElementById('client-name').value || "Cliente Geral";
+      const hours = parseFloat(document.getElementById('hours-input').value) || 0;
+      const hourlyRate = parseFloat(document.getElementById('hourly-rate-input').value) || 0;
+      const extraCost = parseFloat(document.getElementById('extra-cost-input').value) || 0;
+      const marginPercent = parseFloat(document.getElementById('margin-range').value) || 0;
+
+      const laborCost = hours * hourlyRate;
+      const materialsTotal = materials.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
+      const totalCost = laborCost + materialsTotal + extraCost;
+      const profitAmount = totalCost * (marginPercent / 100);
+      const finalPrice = totalCost + profitAmount;
+
+      const newOrder = {
+        id: Date.now(),
+        date: new Date().toLocaleDateString('pt-BR'),
+        title: title,
+        client: client,
+        totalCost: totalCost,
+        finalPrice: finalPrice,
+        profitAmount: profitAmount,
+        marginPercent: marginPercent,
+        status: 'Aprovado' // Padrão
+      };
+
+      ordersHistory.unshift(newOrder);
+      localStorage.setItem('calculati_orders', JSON.stringify(ordersHistory));
+
+      // Atualizar indicador da aba
+      document.getElementById('badge-orders-count').innerText = ordersHistory.length;
+
+      showToast("Serviço salvo no Histórico Local!");
+    }
+
+    function renderOrdersHistory() {
+      const tbody = document.getElementById('orders-table-body');
+      const emptyMsg = document.getElementById('empty-history-msg');
+      tbody.innerHTML = '';
+
+      document.getElementById('badge-orders-count').innerText = ordersHistory.length;
+
+      if (ordersHistory.length === 0) {
+        emptyMsg.classList.remove('hidden');
+        updateDashboardMetrics(0, 0, 0, 0);
+        return;
+      }
+
+      emptyMsg.classList.add('hidden');
+
+      let totalRevenue = 0;
+      let totalProfit = 0;
+      let totalMarginSum = 0;
+
+      ordersHistory.forEach(order => {
+        if (order.status === 'Aprovado' || order.status === 'Concluído') {
+          totalRevenue += order.finalPrice;
+          totalProfit += order.profitAmount;
+          totalMarginSum += order.marginPercent;
+        }
+
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-950/40 transition';
+        tr.innerHTML = `
+          <td class="p-3 text-slate-400">${order.date}</td>
+          <td class="p-3">
+            <div class="font-medium text-slate-100">${order.title}</div>
+            <div class="text-[10px] text-slate-500">Cliente: ${order.client}</div>
+          </td>
+          <td class="p-3 font-mono text-slate-400">R$ ${order.totalCost.toFixed(2).replace('.', ',')}</td>
+          <td class="p-3 font-mono font-semibold text-white">R$ ${order.finalPrice.toFixed(2).replace('.', ',')}</td>
+          <td class="p-3 font-mono text-emerald-400 font-medium">+R$ ${order.profitAmount.toFixed(2).replace('.', ',')}</td>
+          <td class="p-3">
+            <select onchange="updateOrderStatus(${order.id}, this.value)" class="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[11px] text-slate-300 focus:outline-none">
+              <option value="Em Orçamento" ${order.status === 'Em Orçamento' ? 'selected' : ''}>Em Orçamento</option>
+              <option value="Aprovado" ${order.status === 'Aprovado' ? 'selected' : ''}>Aprovado</option>
+              <option value="Concluído" ${order.status === 'Concluído' ? 'selected' : ''}>Concluído</option>
+              <option value="Cancelado" ${order.status === 'Cancelado' ? 'selected' : ''}>Cancelado</option>
+            </select>
+          </td>
+          <td class="p-3 text-right">
+            <button onclick="deleteOrder(${order.id})" class="p-1 text-slate-500 hover:text-red-400 transition" title="Excluir">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      const approvedCount = ordersHistory.filter(o => o.status === 'Aprovado' || o.status === 'Concluído').length;
+      const avgMargin = approvedCount > 0 ? (totalMarginSum / approvedCount) : 0;
+
+      updateDashboardMetrics(totalRevenue, totalProfit, avgMargin, ordersHistory.length);
+      lucide.createIcons();
+    }
+
+    function updateOrderStatus(id, newStatus) {
+      const order = ordersHistory.find(o => o.id === id);
+      if (order) {
+        order.status = newStatus;
+        localStorage.setItem('calculati_orders', JSON.stringify(ordersHistory));
+        renderOrdersHistory();
+        showToast("Status atualizado!");
+      }
+    }
+
+    function deleteOrder(id) {
+      ordersHistory = ordersHistory.filter(o => o.id !== id);
+      localStorage.setItem('calculati_orders', JSON.stringify(ordersHistory));
+      renderOrdersHistory();
+      showToast("Registro removido!");
+    }
+
+    function clearAllHistory() {
+      if (confirm("Tem certeza que deseja apagar todo o histórico de serviços?")) {
+        ordersHistory = [];
+        localStorage.removeItem('calculati_orders');
+        renderOrdersHistory();
+        showToast("Histórico limpo com sucesso!");
+      }
+    }
+
+    function updateDashboardMetrics(revenue, profit, avgMargin, count) {
+      document.getElementById('dash-total-revenue').innerText = revenue.toFixed(2).replace('.', ',');
+      document.getElementById('dash-total-profit').innerText = profit.toFixed(2).replace('.', ',');
+      document.getElementById('dash-avg-margin').innerText = avgMargin.toFixed(0);
+      document.getElementById('dash-total-count').innerText = count;
+    }
+
+    // TOAST NOTIFICAÇÃO
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const msgSpan = document.getElementById('toast-message');
+
+      msgSpan.innerText = message;
+      toast.classList.remove('opacity-0', 'translate-y-5', 'pointer-events-none');
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-5', 'pointer-events-none');
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
